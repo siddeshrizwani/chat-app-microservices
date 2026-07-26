@@ -1,0 +1,82 @@
+create backend folder and frontend folder then inside backend folder create 3 folders(microservices) chat , user , mail 
+then go inside ./backend/user folder in that run "npm init -y" then i need "tsconfig.json file" for this u need to install "typescript" globally on your system by running this "npm i -g typescript" after this to create the tsconfig file we need to run "npx tsc -init "  
+now tsconfig.json file is created now do some changes in that file , search target and change it from "es2016" to "es2020" and search  "module" change it from "commonjs" to "nodenext" , uncomment the rootdir and keep it as ./src in which u will write the typescript code , uncomment the outdir to "./dist"
+
+now changes in package.json change the type to "module " so that we can write code in es6 style and add script "build" :"tsc"
+
+now install "express , dotenv , mongoose"
+
+now we have to install some devDependencies 
+
+Dev dependencies are packages required only during development, such as testing, linting, type checking, or automatic server restarts. They are not needed for running the application in production and are installed using npm install -D <package>.
+
+"npm i -D @types/express @types/mongoose @types/dotenv nodemon concurrently"
+
+@types/express - TypeScript definitions for Express.
+@types/mongoose - TypeScript definitions for Mongoose .
+@types/dotenv - Type definitions for dotenv .
+nodemon - Automatically restarts the server when code changes.
+concurrently - Runs multiple commands at the same time (e.g., frontend + backend together).
+
+Scripts in package.json:
+
+build: "tsc" – Runs the TypeScript Compiler (tsc) to compile all .ts files into .js files (usually inside the dist folder) for execution by Node.js.
+
+start: "node dist/index.js" – Starts the application by running the compiled JavaScript file using the Node.js runtime. This is typically used in production.
+
+dev: "concurrently \"tsc -w\" \"nodemon dist/index.js\"" – Used during development. tsc -w continuously watches TypeScript files and recompiles them on every save, while nodemon watches the compiled JavaScript files and automatically restarts the server whenever changes are detected. concurrently allows both commands to run simultaneously in a single terminal.
+
+ok now inside ./src/index.ts write the code to start the server and execute the command in order first run npm run build or "tsc" which compiles the .ts file and converts it to .js file in dist folder then run npm run dev 
+
+now we will create config folder inside the src folder for database connection 
+
+now for creating the cluster we will visit the mongodb atlas website and create a cluster on that and will get the connection string 
+
+talk about code in model/User.ts
+
+now the otp which will be sent , it will be stored in "redis" and for redis we will use "Upstash" --> "Serverless redis service" 
+"Redis is an in-memory NoSQL database used to store temporary, fast-access data."
+"Unlike MongoDB, Redis stores data in RAM, so it's extremely fast."
+
+"Upstash is a cloud provider that offers a serverless Redis database."
+
+so go on upstash create redis database and install redis for creating connection
+
+run "npm install redis"
+run "npm install -D @types/redis"
+and in index.ts connection code of redis is done 
+
+now we will create routes and controllers 
+so creates 'routes' folder and "controller" folder inside src folder of user 
+
+so for otp sending we have to use mail service and we have to send message which we will do through message broker ==> "RabbitMQ"
+in real life projects which are scalable we cannot keep all the things inside one controller 
+
+"RabbitMQ is a message broker that transfers messages between different applications or microservices."
+"Role:
+    It acts as a middleman between services so they don't communicate directly."
+
+"Queue
+
+A queue stores messages until they are processed.
+
+Role: Holds messages temporarily.
+
+Producer
+
+The service that sends messages to RabbitMQ.
+
+Role: Creates and sends messages.
+
+Consumer
+
+The service that receives messages from RabbitMQ.
+
+Role: Reads and processes messages.
+
+Message
+
+The data being transferred between services.
+
+Role: Carries information such as OTPs, order details, or email requests."
+
