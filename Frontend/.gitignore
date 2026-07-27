@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output (React / Vite / Next.js)
+dist/
+build/
+out/
+.next/
+.cache/
+.parcel-cache/
+
+# Environment variables
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+.env.test
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Vercel / Netlify
+.vercel/
+.netlify/
