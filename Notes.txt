@@ -80,4 +80,68 @@ The data being transferred between services.
 
 Role: Carries information such as OTPs, order details, or email requests."
 
-To be continued:-
+📦 How the Flow Works:
+✅ 1. User hits login API (/login)
+A 6-digit OTP is generated.
+The OTP is stored in Redis.
+Then, we send a message to RabbitMQ (to the send-otp queue), which contains:
+{
+  "to": "user@example.com",
+  "subject": "Your OTP Code",
+  "body": "Your OTP is 123456. It is valid for 5 minutes."
+}
+📤 2. Producer — Publishing to RabbitMQ
+Inside the LoginUser controller, we use a function like:
+publishToQueue("send-otp", message)
+
+to push the OTP email job to RabbitMQ.
+
+📥 3. Consumer — Worker picks the job
+In a separate file (usually consumer.ts), we run a background worker which:
+Listens to the send-otp queue.
+When a message arrives, it reads the email details and uses nodemailer (or any mail service) to send the email.
+After success, it acknowledges the message:
+channel.ack(msg)
+
+Why Use RabbitMQ?
+
+✅ Non-blocking: The user doesn't have to wait for the email to be sent — the API responds instantly.
+
+✅ Scalable: We can send thousands of emails by running multiple consumers (workers).
+
+✅ Reliable: If email fails, we can requeue the message and try again.
+
+now we have to run rabbit mq on docker 
+so first install docker desktop 
+after installation we have to open command prompt and have to run command to run rabbitmq on docker 
+"docker run -d \
+--hostname rabbitmq-host \
+--name rabbitmq-container \
+-e RABBITMQ_DEFAULT_USER=admin \
+-e RABBITMQ_DEFAULT_PASS=admin123 \
+-p 5672:5672 \
+-p 15672:15672 \ rabbitmq:3-management"
+
+now the rabbitmq container is downloaded and u can check it on "localhost:15672"
+now we have to download "amqlib" - used for connection between nodejs and rabbitmq 
+"npm install amqplib"
+
+and download the type version "npm install -D @types/amqplib"
+now create file inside config folder "rabbitmq.ts"-- dont know what is written 
+now we will use this in mail service copu the tsconfig file from user folder to mail folder 
+
+open new terminal for mail service and use the rabbitmq in that mail service 
+
+now go in the mail folder and run "npm init -y" and run "npm install expres dotenv nodemailer amqplib"
+and run "npm install -D @types/nodemailer @types/express @types/dotenv @types/amqplib concurrently"
+
+now we will create index.ts inside the src folder of mail and basic server is created on port 5001 and copied scripts from package.json from user folder's package.json file 
+then run "tsc" which will create dist folder inside the mail folder and now run 'npm run dev' which will start the server on port 5001 
+now we will create consumer file , inside the src folder create consumer.ts - standard code using nodemailer -smtp servers of google to send mail to the user
+
+now we will create the controller inside the user/src/controllers user.ts to log in the user 
+after that we will add that in our routes 
+
+now we will check our api "/api/v1/login post " we are recieving otp on mail with rate limiter working properly 
+
+now we will write inside the controller in user service to "verify user" 
