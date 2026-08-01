@@ -145,3 +145,4 @@ after that we will add that in our routes
 now we will check our api "/api/v1/login post " we are recieving otp on mail with rate limiter working properly 
 
 now we will write inside the controller in user service to "verify user" 
+now inside the controller we need to create the jwt token creation function for the user which will be used multiple times so creating new file inside config folder "generateToken" 
