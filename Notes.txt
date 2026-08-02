@@ -153,3 +153,56 @@ for that creating new folder "middleware" in user microservice and in that new f
 now new controller for fetching profile , inside the ./user/controllers/user.ts
 
 new user controller for updating name of the user , find all users , find user by id
+
+cors downloaded inside the user service and integrated in index.ts 
+
+
+
+============================================================
+             USER SERVICE — API REFERENCE
+         Base URL: http://localhost:5000/api/v1
+============================================================
+
+------------------------------------------------------------
+  PUBLIC ROUTES (No token required)
+------------------------------------------------------------
+
+  [POST]  /login
+  → Request OTP to be sent to email
+  → Body: { "email": "you@example.com" }
+  → Rate limited: max 3 requests per 5 minutes
+
+  [POST]  /verify
+  → Verify OTP and receive JWT token
+  → Body: { "email": "you@example.com", "otp": "123456" }
+  → Response: { message, user, token }
+
+------------------------------------------------------------
+  PROTECTED ROUTES (Authorization: Bearer <token>)
+------------------------------------------------------------
+
+  [GET]   /me
+  → Get the currently logged-in user's profile
+
+  [PUT]   /me
+  → Update the currently logged-in user's name
+  → Body: { "name": "New Name" }
+  → Response: { message: "User Updated", user, token }
+
+  [GET]   /all
+  → Get all registered users
+
+  [GET]   /:id
+  → Get a single user by their MongoDB ID
+  → Params: id = MongoDB ObjectId of the user
+
+------------------------------------------------------------
+  POSTMAN TIP
+------------------------------------------------------------
+  1. Create a Collection Variable named "token"
+  2. After /verify, save the token from the response
+  3. In all protected requests, set:
+     Authorization → Bearer {{token}}
+============================================================
+
+now chat service will start ..
