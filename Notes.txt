@@ -149,3 +149,4 @@ now inside the controller we need to create the jwt token creation function for 
 
 now we will create controller for fetching user details/profile but for that we will need the middleware for checking whether the user is authenticated or not and if yes then only he/she can see their profile 
 for that creating new folder "middleware" in user microservice and in that new file "isAuth.ts"  
+
