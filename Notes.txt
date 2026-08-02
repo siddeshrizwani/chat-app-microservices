@@ -146,3 +146,6 @@ now we will check our api "/api/v1/login post " we are recieving otp on mail wit
 
 now we will write inside the controller in user service to "verify user" 
 now inside the controller we need to create the jwt token creation function for the user which will be used multiple times so creating new file inside config folder "generateToken" 
+
+now we will create controller for fetching user details/profile but for that we will need the middleware for checking whether the user is authenticated or not and if yes then only he/she can see their profile 
+for that creating new folder "middleware" in user microservice and in that new file "isAuth.ts"  
