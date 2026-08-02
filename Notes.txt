@@ -151,3 +151,5 @@ now we will create controller for fetching user details/profile but for that we 
 for that creating new folder "middleware" in user microservice and in that new file "isAuth.ts"  
 
 now new controller for fetching profile , inside the ./user/controllers/user.ts
+
+new user controller for updating name of the user , find all users , find user by id
