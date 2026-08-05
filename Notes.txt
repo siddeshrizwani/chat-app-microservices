@@ -184,12 +184,12 @@ cors downloaded inside the user service and integrated in index.ts
   [GET]   /me
   → Get the currently logged-in user's profile
 
-  [PUT]   /me
+  [PUT]   /update/user
   → Update the currently logged-in user's name
   → Body: { "name": "New Name" }
   → Response: { message: "User Updated", user, token }
 
-  [GET]   /all
+  [GET]   /user/all
   → Get all registered users
 
   [GET]   /:id
