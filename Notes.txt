@@ -206,3 +206,15 @@ cors downloaded inside the user service and integrated in index.ts
 ============================================================
 
 now chat service will start ..
+open new terminal for chat where initiate the node application
+"git init -y" and install some important dependencies "npm install express dotenv mongoose jsonwebtoken axios" 
+"Axios is a library used to send HTTP requests to a server(here-user service)."
+"npm install -D @types/express @types/dotenv @types/mongoose @types/jsonwebtoken @types/axios concurrently"
+
+copy the "tsconfig.json from mail service " then copy the script and type from user service or mail service 
+then create folder inside the chat service named "src" and create "index.ts file inside it " and then create server inside then run "tsc" then the dist folder will be created then run "npm run dev"
+now we have to setup the routes and controller but before that lets create models , create new folder inside src folder "models" and create new file "Chat.ts" , now model is done 
+now create controllers folder inside src and create "chat.ts" but before controllers we need db connection , create "config" folder inside src folder , copy db.ts and TryCatch.ts from user service and paste it inside config folder and copy mongo uri too and in "index.ts " call connectDb
+now db is connected now we will create controller for chat but wait this request will be only for authenticated users for that we need to create the middleware - create new folder 'middlewares' inside the src folder and inside it create two files "isAuth.ts and __"  
+
+now isAuth.ts is (middleware) now create "chat.ts" controller and inside that controller we have to create newChat function which will check wheteher there is existing chat in db , if not it creates new chat and later add the route create "chat.ts" inside routes folder 
