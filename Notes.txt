@@ -221,3 +221,40 @@ now isAuth.ts is (middleware) now create "chat.ts" controller and inside that co
 
 now create chat route is done , now we will create route for "fetching all the chats" in that we will sort the chat with particular use according to 
 "updatedAt" and we need to show the name/details of other users with which we are chatting and also we need to maintain unseen count of messages but for that we need "message model " create "Messages.ts" inside the models folder of chat service 
+
+now we will create "send messages route and controller" , go inside /controllers/chat.ts , now with messages we may also send images so for it we need to setup multer  , inside the middleware folder create "multer.ts" 
+run 'npm install cloudinary multer multer-storage-cloudinary ' and "npm install -D  @types/multer " after that we have to write in multer.ts but before that create file inside the config folder "cloudinary.ts"
+
+
+============================================================
+              MULTER + CLOUDINARY — IMAGE UPLOAD
+============================================================
+
+HOW IT WORKS (flow):
+  User sends image → Multer → Cloudinary → Save URL in MongoDB
+
+------------------------------------------------------------
+  MULTER
+------------------------------------------------------------
+  Express cannot read files from requests by default.
+  Multer parses multipart/form-data and puts the file on req.file.
+  That's its only job — read the file from the request.
+
+------------------------------------------------------------
+  CLOUDINARY
+------------------------------------------------------------
+  Cloud storage service for images/videos.
+  You never store images in MongoDB (it's a DB, not a file server).
+  Upload to Cloudinary → get back a URL → save that URL in MongoDB.
+  e.g. https://res.cloudinary.com/your-cloud/image/upload/abc123.jpg
+
+------------------------------------------------------------
+  MULTER-STORAGE-CLOUDINARY
+------------------------------------------------------------
+  Connects Multer and Cloudinary together.
+  Instead of saving to disk, Multer streams the file directly to Cloudinary.
+  By the time it hits your controller:
+    - Image is already uploaded to Cloudinary
+    - req.file contains the Cloudinary URL
+
+create account cloudinary copy the cloudname,api key, api secret 
