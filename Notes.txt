@@ -218,3 +218,6 @@ now create controllers folder inside src and create "chat.ts" but before control
 now db is connected now we will create controller for chat but wait this request will be only for authenticated users for that we need to create the middleware - create new folder 'middlewares' inside the src folder and inside it create two files "isAuth.ts and __"  
 
 now isAuth.ts is (middleware) now create "chat.ts" controller and inside that controller we have to create newChat function which will check wheteher there is existing chat in db , if not it creates new chat and later add the route create "chat.ts" inside routes folder 
+
+now create chat route is done , now we will create route for "fetching all the chats" in that we will sort the chat with particular use according to 
+"updatedAt" and we need to show the name/details of other users with which we are chatting and also we need to maintain unseen count of messages but for that we need "message model " create "Messages.ts" inside the models folder of chat service 
