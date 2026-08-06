@@ -185,7 +185,7 @@ export const sendMessage = TryCatch(async (req: AuthenticatedRequest, res) => {
 
   const savedMessage = await message.save();
 
-  const latestMessageText = imageFile ? "📷 Image" : text;
+  const latestMessageText = imageFile ? "Image" : text;
 
   await Chat.findByIdAndUpdate(
     chatId,
