@@ -195,3 +195,87 @@ export const sendMessage = TryCatch(async (req: AuthenticatedRequest, res) => {
 
   res.status(201).json({ message: savedMessage, sender: senderId });
 });
+
+// Opens a chat — fetches all messages and marks unread ones as seen
+export const getMessagesByChat = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?._id;
+    const { chatId } = req.params;
+
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    if (!chatId) {
+      res.status(400).json({ message: "ChatId Required" });
+      return;
+    }
+
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      res.status(404).json({ message: "Chat not found" });
+      return;
+    }
+
+    // security — only participants can read messages
+    const isUserInChat = chat.users.some(
+      (userId) => userId.toString() === userId.toString()
+    );
+
+    if (!isUserInChat) {
+      res.status(403).json({ message: "You are not a participant of this chat" });
+      return;
+    }
+
+    // find unread messages from the other person before marking them seen
+    // stored separately so we can notify sender via socket later (double tick → blue tick)
+    const messagesToMarkSeen = await Messages.find({
+      chatId,
+      sender: { $ne: userId },
+      seen: false,
+    });
+
+    // mark all unread messages from the other person as seen
+    await Messages.updateMany(
+      { chatId, sender: { $ne: userId }, seen: false },
+      { seen: true, seenAt: new Date() }
+    );
+
+    // fetch all messages oldest first — renders top to bottom on frontend
+    const messages = await Messages.find({ chatId }).sort({ createdAt: 1 });
+
+    // find the other person's id to fetch their profile
+    const otherUserId = chat.users.find((id) => id !== userId);
+
+    try {
+      // inter-service call — get other user's profile from user service for chat header
+      const { data } = await axios.get(
+        `${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`
+      );
+
+      if (!otherUserId) {
+        res.status(400).json({ message: "No other user" });
+        return;
+      }
+
+      //socket — notify sender their messages were seen (blue tick) — TODO: uncomment when socket.js is implemented
+      // if (messagesToMarkSeen.length > 0) {
+      //   const otherUserSocketId = getRecieverSocketId(otherUserId.toString());
+      //   if (otherUserSocketId) {
+      //     io.to(otherUserSocketId).emit("messagesSeen", {
+      //       chatId, seenBy: userId, messageIds: messagesToMarkSeen.map((msg) => msg._id),
+      //     });
+      //   }
+      // }
+
+      // return all messages + other user's profile for the chat screen
+      res.json({ messages, user: data });
+    } catch (error) {
+      // user service down — return fallback user
+      console.log(error);
+      res.json({ messages, user: { _id: otherUserId, name: "Unknown User" } });
+    }
+  }
+);

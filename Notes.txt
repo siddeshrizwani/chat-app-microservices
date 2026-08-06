@@ -258,3 +258,5 @@ HOW IT WORKS (flow):
     - req.file contains the Cloudinary URL
 
 create account cloudinary copy the cloudname,api key, api secret 
+now the rotue is ready for sending messages and u can check it on postman 
+now create controller "getMessagesByChat"
