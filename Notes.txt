@@ -259,4 +259,8 @@ HOW IT WORKS (flow):
 
 create account cloudinary copy the cloudname,api key, api secret 
 now the rotue is ready for sending messages and u can check it on postman 
-now create controller "getMessagesByChat"
+now create controller "getMessagesByChat" its done and pushed on gtihub , now we will start with frontend part
+
+IN FRONTEND 
+  first create nextApp using vercel website run 'npx create-next-app@latest . ' , then install "jscookies to store cookies" and install "lucide react icons" and install "react hot toast" , run "npm install js-cookie lucide-react @types/js-cookie axios react-hot-toast "
+  now create "login" folder inside app folder and create "page.tsx"
