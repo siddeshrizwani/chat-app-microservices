@@ -92,6 +92,7 @@ export const getAllChats = TryCatch(async (req: AuthenticatedRequest, res) => {
 });
 
 
+// Send a text or image message in a chat
 export const sendMessage = TryCatch(async (req: AuthenticatedRequest, res) => {
   const senderId = req.user?._id;
   const { chatId, text } = req.body;
@@ -99,60 +100,51 @@ export const sendMessage = TryCatch(async (req: AuthenticatedRequest, res) => {
   const imageFile = (req as any).file;
 
   if (!senderId) {
-    res.status(401).json({
-      message: "unauthorized",
-    });
-    return;
-  }
-  if (!chatId) {
-    res.status(400).json({
-      message: "ChatId Required",
-    });
+    res.status(401).json({ message: "unauthorized" });
     return;
   }
 
+  if (!chatId) {
+    res.status(400).json({ message: "ChatId Required" });
+    return;
+  }
+
+  // must send either text or image
   if (!text && !imageFile) {
-    res.status(400).json({
-      message: "Either text or image is required",
-    });
+    res.status(400).json({ message: "Either text or image is required" });
     return;
   }
 
   const chat = await Chat.findById(chatId);
 
   if (!chat) {
-    res.status(404).json({
-      message: "Chat not found",
-    });
+    res.status(404).json({ message: "Chat not found" });
     return;
   }
 
+  // security — only participants can send messages
   const isUserInChat = chat.users.some(
     (userId) => userId.toString() === senderId.toString()
   );
 
   if (!isUserInChat) {
-    res.status(403).json({
-      message: "You are not a participant of this chat",
-    });
+    res.status(403).json({ message: "You are not a participant of this chat" });
     return;
   }
 
+  // needed for socket notification later
   const otherUserId = chat.users.find(
     (userId) => userId.toString() !== senderId.toString()
   );
 
   if (!otherUserId) {
-    res.status(401).json({
-      message: "No other user",
-    });
+    res.status(401).json({ message: "No other user" });
     return;
   }
 
   //socket setup — TODO: uncomment when socket.js is implemented
   // const receiverSocketId = getRecieverSocketId(otherUserId.toString());
   // let isReceiverInChatRoom = false;
-
   // if (receiverSocketId) {
   //   const receiverSocket = io.sockets.sockets.get(receiverSocketId);
   //   if (receiverSocket && receiverSocket.rooms.has(chatId)) {
@@ -162,18 +154,17 @@ export const sendMessage = TryCatch(async (req: AuthenticatedRequest, res) => {
 
   const isReceiverInChatRoom = false; // default until socket is set up
 
+  // base message data — seen is true only if receiver is currently in the chat room
   let messageData: any = {
-    chatId: chatId,
+    chatId,
     sender: senderId,
     seen: isReceiverInChatRoom,
     seenAt: isReceiverInChatRoom ? new Date() : undefined,
   };
 
+  // fill image or text fields based on what was sent
   if (imageFile) {
-    messageData.image = {
-      url: (imageFile as any).path,
-      publicId: (imageFile as any).filename,
-    };
+    messageData.image = { url: (imageFile as any).path, publicId: (imageFile as any).filename };
     messageData.messageType = "image";
     messageData.text = text || "";
   } else {
@@ -181,46 +172,26 @@ export const sendMessage = TryCatch(async (req: AuthenticatedRequest, res) => {
     messageData.messageType = "text";
   }
 
+  // save message to DB
   const message = new Messages(messageData);
-
   const savedMessage = await message.save();
 
+  // update chat's latest message — shown as preview in chat list
   const latestMessageText = imageFile ? "Image" : text;
-
   await Chat.findByIdAndUpdate(
     chatId,
-    {
-      latestMessage: {
-        text: latestMessageText,
-        sender: senderId,
-      },
-      updatedAt: new Date(),
-    },
+    { latestMessage: { text: latestMessageText, sender: senderId }, updatedAt: new Date() },
     { new: true }
   );
 
   //emit to sockets — TODO: uncomment when socket.js is implemented
   // io.to(chatId).emit("newMessage", savedMessage);
-
-  // if (receiverSocketId) {
-  //   io.to(receiverSocketId).emit("newMessage", savedMessage);
-  // }
-
+  // if (receiverSocketId) { io.to(receiverSocketId).emit("newMessage", savedMessage); }
   // const senderSocketId = getRecieverSocketId(senderId.toString());
-  // if (senderSocketId) {
-  //   io.to(senderSocketId).emit("newMessage", savedMessage);
-  // }
-
+  // if (senderSocketId) { io.to(senderSocketId).emit("newMessage", savedMessage); }
   // if (isReceiverInChatRoom && senderSocketId) {
-  //   io.to(senderSocketId).emit("messagesSeen", {
-  //     chatId: chatId,
-  //     seenBy: otherUserId,
-  //     messageIds: [savedMessage._id],
-  //   });
+  //   io.to(senderSocketId).emit("messagesSeen", { chatId, seenBy: otherUserId, messageIds: [savedMessage._id] });
   // }
 
-  res.status(201).json({
-    message: savedMessage,
-    sender: senderId,
-  });
+  res.status(201).json({ message: savedMessage, sender: senderId });
 });
