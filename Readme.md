@@ -24,7 +24,7 @@ Next.js (frontend), Tailwind CSS, Cloudinary, JWT, Docker, PM2, AWS EC2
 
 ## Deployment
 Deployed on a single AWS EC2 (Ubuntu) instance — RabbitMQ in Docker, three Node services managed by PM2,
-and a statically built Next.js frontend served in production mode.
+and a statically built Next.js frontend served in production mode...
 
 ## Repository
 https://github.com/siddeshrizwani/chat-app-microservices
