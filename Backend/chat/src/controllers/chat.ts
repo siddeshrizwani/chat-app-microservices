@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../middlewares/isAuth.js";
 import { Chat } from "../models/Chat.js";
 import { Messages } from "../models/Messages.js";
 import axios from "axios";
+import { getRecieverSocketId, io } from "../config/socket.js";
 
 // Creates a new 1-on-1 chat between the logged-in user and another user
 export const createNewChat = TryCatch(
@@ -142,17 +143,20 @@ export const sendMessage = TryCatch(async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  //socket setup — TODO: uncomment when socket.js is implemented
-  // const receiverSocketId = getRecieverSocketId(otherUserId.toString());
-  // let isReceiverInChatRoom = false;
-  // if (receiverSocketId) {
-  //   const receiverSocket = io.sockets.sockets.get(receiverSocketId);
-  //   if (receiverSocket && receiverSocket.rooms.has(chatId)) {
-  //     isReceiverInChatRoom = true;
-  //   }
-  // }
+  //socket setup
+  // find the receiver's live socket, if they are online at all
+  const receiverSocketId = getRecieverSocketId(otherUserId.toString());
+  let isReceiverInChatRoom = false;
 
-  const isReceiverInChatRoom = false; // default until socket is set up
+  // being online is not enough — check if they have this chat actually open
+  // (they joined the room named after chatId via the "joinChat" event)
+  // if yes, the message is marked seen straight away
+  if (receiverSocketId) {
+    const receiverSocket = io.sockets.sockets.get(receiverSocketId);
+    if (receiverSocket && receiverSocket.rooms.has(chatId)) {
+      isReceiverInChatRoom = true;
+    }
+  }
 
   // base message data — seen is true only if receiver is currently in the chat room
   let messageData: any = {
@@ -184,14 +188,30 @@ export const sendMessage = TryCatch(async (req: AuthenticatedRequest, res) => {
     { new: true }
   );
 
-  //emit to sockets — TODO: uncomment when socket.js is implemented
-  // io.to(chatId).emit("newMessage", savedMessage);
-  // if (receiverSocketId) { io.to(receiverSocketId).emit("newMessage", savedMessage); }
-  // const senderSocketId = getRecieverSocketId(senderId.toString());
-  // if (senderSocketId) { io.to(senderSocketId).emit("newMessage", savedMessage); }
-  // if (isReceiverInChatRoom && senderSocketId) {
-  //   io.to(senderSocketId).emit("messagesSeen", { chatId, seenBy: otherUserId, messageIds: [savedMessage._id] });
-  // }
+  //emit to sockets
+  // everyone currently inside this chat room gets the message instantly
+  io.to(chatId).emit("newMessage", savedMessage);
+
+  // also send directly to the receiver even if the chat is not open,
+  // so their chat list preview and unseen count update live
+  if (receiverSocketId) {
+    io.to(receiverSocketId).emit("newMessage", savedMessage);
+  }
+
+  // send to the sender's own socket too, keeps other tabs/devices in sync
+  const senderSocketId = getRecieverSocketId(senderId.toString());
+  if (senderSocketId) {
+    io.to(senderSocketId).emit("newMessage", savedMessage);
+  }
+
+  // receiver already had the chat open, so tell the sender it was seen right away (blue tick)
+  if (isReceiverInChatRoom && senderSocketId) {
+    io.to(senderSocketId).emit("messagesSeen", {
+      chatId,
+      seenBy: otherUserId,
+      messageIds: [savedMessage._id],
+    });
+  }
 
   res.status(201).json({ message: savedMessage, sender: senderId });
 });
@@ -260,15 +280,17 @@ export const getMessagesByChat = TryCatch(
         return;
       }
 
-      //socket — notify sender their messages were seen (blue tick) — TODO: uncomment when socket.js is implemented
-      // if (messagesToMarkSeen.length > 0) {
-      //   const otherUserSocketId = getRecieverSocketId(otherUserId.toString());
-      //   if (otherUserSocketId) {
-      //     io.to(otherUserSocketId).emit("messagesSeen", {
-      //       chatId, seenBy: userId, messageIds: messagesToMarkSeen.map((msg) => msg._id),
-      //     });
-      //   }
-      // }
+      //socket — notify the sender that their messages were just seen (blue tick)
+      if (messagesToMarkSeen.length > 0) {
+        const otherUserSocketId = getRecieverSocketId(otherUserId.toString());
+        if (otherUserSocketId) {
+          io.to(otherUserSocketId).emit("messagesSeen", {
+            chatId,
+            seenBy: userId,
+            messageIds: messagesToMarkSeen.map((msg) => msg._id),
+          });
+        }
+      }
 
       // return all messages + other user's profile for the chat screen
       res.json({ messages, user: data });
