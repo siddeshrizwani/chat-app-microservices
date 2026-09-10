@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
+import { SocketProvider } from "@/context/SocketContext";
 
 export const metadata: Metadata = {
   title: "Chat App",
@@ -15,9 +16,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       {/* AppProvider wraps the whole app so every page can read the logged in
-          user, the chat list and the users list from one place */}
+          user, the chat list and the users list from one place.
+          SocketProvider sits inside it because it needs user._id to connect */}
       <body>
-        <AppProvider>{children}</AppProvider>
+        <AppProvider>
+          <SocketProvider>{children}</SocketProvider>
+        </AppProvider>
       </body>
     </html>
   );
