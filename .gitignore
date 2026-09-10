@@ -70,6 +70,11 @@ coverage/
 docker-compose.override.yml
 
 # ========================
+# Local reference copy of the finished code (not part of the project)
+# ========================
+chat code/
+
+# ========================
 # Miscellaneous
 # ========================
 *.tsbuildinfo
