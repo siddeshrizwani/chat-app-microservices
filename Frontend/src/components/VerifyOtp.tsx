@@ -1,24 +1,22 @@
 "use client";
 import axios from "axios";
 import { ArrowRight, ChevronLeft, Loader2, Lock } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { redirect, useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import Cookies from "js-cookie";
-// import { useAppData, user_service } from "@/context/AppContext";
-// import Loading from "./Loading";
+import { useAppData, user_service } from "@/context/AppContext";
+import Loading from "./Loading";
 import toast from "react-hot-toast";
 
-const user_service = "http://localhost:5000";
-
 const VerifyOtp = () => {
-  // const {
-  //   isAuth,
-  //   setIsAuth,
-  //   setUser,
-  //   loading: userLoading,
-  //   fetchChats,
-  //   fetchUsers,
-  // } = useAppData();
+  const {
+    isAuth,
+    setIsAuth,
+    setUser,
+    loading: userLoading,
+    fetchChats,
+    fetchUsers,
+  } = useAppData();
   const [loading, setLoading] = useState(false);
   const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
   const [error, setError] = useState<string>("");
@@ -95,11 +93,13 @@ const VerifyOtp = () => {
       });
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
-      // setUser(data.user);
-      // setIsAuth(true);
-      // fetchChats();
-      // fetchUsers();
-      router.push("/chat");
+      // fill the global state right away instead of refetching /me
+      setUser(data.user);
+      setIsAuth(true);
+      // now that we have a token, load the chat list and the users list
+      fetchChats();
+      fetchUsers();
+      // no router.push needed — setIsAuth(true) makes the redirect below fire
     } catch (error: any) {
       setError(error.response.data.message);
     } finally {
@@ -123,8 +123,10 @@ const VerifyOtp = () => {
     }
   };
 
-  // if (userLoading) return <Loading />;
-  // if (isAuth) redirect("/chat");
+  if (userLoading) return <Loading />;
+
+  // fires right after a successful verify, and also blocks re-visiting this page
+  if (isAuth) redirect("/chat");
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full">

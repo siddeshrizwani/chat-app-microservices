@@ -1,20 +1,21 @@
 "use client";
-// import Loading from "@/components/Loading";
-// import { useAppData, user_service } from "@/context/AppContext";
+import Loading from "@/components/Loading";
+// user_service url now comes from the context instead of being redeclared here
+import { useAppData, user_service } from "@/context/AppContext";
 import axios from "axios";
 import { ArrowRight, Loader2, Mail } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-
-const user_service = "http://localhost:5000";
 
 const LoginPage = () => {
   const [email, setEmail] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const router = useRouter();
 
-  // const { isAuth, loading: userLoading } = useAppData();
+  // global auth state — renamed loading to userLoading to avoid clashing
+  // with the local loading of this form
+  const { isAuth, loading: userLoading } = useAppData();
 
   const handleSubmit = async (
     e: React.FormEvent<HTMLElement>
@@ -36,8 +37,10 @@ const LoginPage = () => {
     }
   };
 
-  // if (userLoading) return <Loading />;
-  // if (isAuth) return redirect("/chat");
+  // wait for the /me check before deciding what to show
+  if (userLoading) return <Loading />;
+  // already logged in? no reason to see the login form
+  if (isAuth) return redirect("/chat");
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
