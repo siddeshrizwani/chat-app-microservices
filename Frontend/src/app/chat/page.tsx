@@ -10,6 +10,7 @@ import axios from "axios";
 import ChatHeader from "@/components/ChatHeader";
 import ChatMessages from "@/components/ChatMessages";
 import MessageInput from "@/components/MessageInput";
+import { SocketData } from "@/context/SocketContext";
 
 // shape of a message as the chat service returns it
 // lives here because the chat page owns the messages state,
@@ -41,6 +42,9 @@ const ChatApp = () => {
     setChats,
   } = useAppData();
 
+  // live socket plus the list of user ids currently connected
+  const { onlineUsers, socket } = SocketData();
+
   // selectedUser holds the chatId of the open conversation, not a userId
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -49,6 +53,12 @@ const ChatApp = () => {
   // the other person in the open chat, returned alongside the messages
   const [user, setUser] = useState<User | null>(null);
   const [showAllUser, setShowAllUser] = useState(false);
+  // true while the other person is typing in the open chat
+  const [isTyping, setIsTyping] = useState(false);
+  // holds the pending "stopTyping" timer so it can be cancelled and restarted
+  const [typingTimeOut, setTypingTimeOut] = useState<NodeJS.Timeout | null>(
+    null
+  );
 
   const router = useRouter();
 
@@ -88,7 +98,8 @@ const ChatApp = () => {
   // so we don't have to refetch the whole list after every message
   const moveChatToTop = (
     chatId: string,
-    newMessage: { text: string; sender: string },
+    // text is optional because a socket Message for an image has an empty text
+    newMessage: { text?: string; sender: string },
     updatedUnseenCount = true
   ) => {
     setChats((prev) => {
@@ -108,7 +119,8 @@ const ChatApp = () => {
           chat: {
             ...moveChat.chat,
             latestMessage: {
-              text: newMessage.text,
+              // image only messages carry no text, show a label instead of a blank row
+              text: newMessage.text || "📷 image",
               sender: newMessage.sender,
             },
             updatedAt: new Date().toString(),
@@ -184,6 +196,18 @@ const ChatApp = () => {
 
     if (!selectedUser) return;
 
+    // socket work — sending means we are done typing, so cancel the pending
+    // timer and tell the other side immediately
+    if (typingTimeOut) {
+      clearTimeout(typingTimeOut);
+      setTypingTimeOut(null);
+    }
+
+    socket?.emit("stopTyping", {
+      chatId: selectedUser,
+      userId: loggedInUser?._id,
+    });
+
     const token = Cookies.get("token");
 
     try {
@@ -246,23 +270,153 @@ const ChatApp = () => {
     }
   };
 
-  // wraps setMessage so the socket typing event can be added here later
   const handleTyping = (value: string) => {
     setMessage(value);
+
+    if (!selectedUser || !socket) return;
+
+    // socket setup — announce typing on every keystroke that isn't empty
+    if (value.trim()) {
+      socket.emit("typing", {
+        chatId: selectedUser,
+        userId: loggedInUser?._id,
+      });
+    }
+
+    // debounce: each keystroke cancels the previous timer, so "stopTyping"
+    // only fires once the user has been idle for 2 seconds
+    if (typingTimeOut) {
+      clearTimeout(typingTimeOut);
+    }
+
+    const timeout = setTimeout(() => {
+      socket.emit("stopTyping", {
+        chatId: selectedUser,
+        userId: loggedInUser?._id,
+      });
+    }, 2000);
+
+    setTypingTimeOut(timeout);
   };
+
+  // all incoming realtime events land here
+  useEffect(() => {
+    socket?.on("newMessage", (message: Message) => {
+      console.log("Recieved new message:", message);
+
+      // the message belongs to the chat I am looking at
+      if (selectedUser === message.chatId) {
+        setMessages((prev) => {
+          const currentMessages = prev || [];
+          // the sender already appended it from the post response
+          const messageExists = currentMessages.some(
+            (msg) => msg._id === message._id
+          );
+
+          if (!messageExists) {
+            return [...currentMessages, message];
+          }
+          return currentMessages;
+        });
+
+        // chat is open, so nothing is unread — don't bump the badge
+        moveChatToTop(message.chatId, message, false);
+      } else {
+        // message for some other chat, bump its unread badge
+        moveChatToTop(message.chatId, message, true);
+      }
+    });
+
+    socket?.on(
+      "messagesSeen",
+      (data: { chatId: string; seenBy: string; messageIds?: string[] }) => {
+        console.log("Message seen by:", data);
+
+        if (selectedUser === data.chatId) {
+          // flip my own messages to seen so the tick turns blue
+          setMessages((prev) => {
+            if (!prev) return null;
+            return prev.map((msg) => {
+              if (
+                msg.sender === loggedInUser?._id &&
+                data.messageIds &&
+                data.messageIds.includes(msg._id)
+              ) {
+                return {
+                  ...msg,
+                  seen: true,
+                  seenAt: new Date().toString(),
+                };
+              } else if (msg.sender === loggedInUser?._id && !data.messageIds) {
+                // no ids given means everything in this chat was seen
+                return {
+                  ...msg,
+                  seen: true,
+                  seenAt: new Date().toString(),
+                };
+              }
+              return msg;
+            });
+          });
+        }
+      }
+    );
+
+    socket?.on("userTyping", (data: { chatId: string; userId: string }) => {
+      console.log("recieved user typing", data);
+      // ignore the echo of my own typing
+      if (data.chatId === selectedUser && data.userId !== loggedInUser?._id) {
+        setIsTyping(true);
+      }
+    });
+
+    socket?.on(
+      "userStoppedTyping",
+      (data: { chatId: string; userId: string }) => {
+        console.log("recieved user stopped typing", data);
+        if (data.chatId === selectedUser && data.userId !== loggedInUser?._id) {
+          setIsTyping(false);
+        }
+      }
+    );
+
+    // remove the old listeners before re-registering with a new selectedUser,
+    // otherwise they stack up and fire multiple times
+    return () => {
+      socket?.off("newMessage");
+      socket?.off("messagesSeen");
+      socket?.off("userTyping");
+      socket?.off("userStoppedTyping");
+    };
+  }, [socket, selectedUser, setChats, loggedInUser?._id]);
 
   // load the conversation whenever a different chat is picked
   useEffect(() => {
     if (selectedUser) {
       fetchChat();
+      setIsTyping(false);
 
       resetUnseenCount(selectedUser);
 
+      // joining the room is what tells the backend I am looking at this chat,
+      // which is how incoming messages get marked seen straight away
+      socket?.emit("joinChat", selectedUser);
+
       return () => {
+        socket?.emit("leaveChat", selectedUser);
         setMessages(null);
       };
     }
-  }, [selectedUser]);
+  }, [selectedUser, socket]);
+
+  // don't leave a pending timer behind when the page unmounts
+  useEffect(() => {
+    return () => {
+      if (typingTimeOut) {
+        clearTimeout(typingTimeOut);
+      }
+    };
+  }, [typingTimeOut]);
 
   if (loading) return <Loading />;
   return (
@@ -279,14 +433,14 @@ const ChatApp = () => {
         setSelectedUser={setSelectedUser}
         handleLogout={handleLogout}
         createChat={createChat}
-        onlineUsers={[]}
+        onlineUsers={onlineUsers}
       />
       <div className="flex-1 flex flex-col justify-between p-4 backdrop-blur-xl bg-white/5 border-1 border-white/10">
         <ChatHeader
           user={user}
           setSidebarOpen={setSiderbarOpen}
-          isTyping={false}
-          onlineUsers={[]}
+          isTyping={isTyping}
+          onlineUsers={onlineUsers}
         />
 
         <ChatMessages
